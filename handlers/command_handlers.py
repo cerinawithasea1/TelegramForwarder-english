@@ -792,6 +792,12 @@ async def handle_help_command(event, command):
         "/list_rule(/lr) - List all forwarding rules\n"
         "/delete_rule(/dr) <rule ID> [rule ID] [rule ID] ... - Delete specified rules\n\n"
 
+        "**Media Filter & Forward Mode**\n"
+        "Use /settings <rule ID> to configure:\n"
+        "• `Media Settings` → Media Types — choose which types to allow (document, audio, etc.). Set to document+audio only to block photos/videos/voice.\n"
+        "• `Other Settings` → Handle Mode — set to `EDIT` to copy messages without the \"forwarded from\" header.\n"
+        "• `Other Settings` → Media Type Filter — enable to apply the media type restrictions.\n\n"
+
         "**Keyword Management**\n"
         "/add(/a) <keyword> [keyword] [\"key word\"] [\\'key word\\'] ... - Add plain keywords\n"
         "/add_regex(/ar) <regex> [regex] [regex] ... - Add regex patterns\n"
