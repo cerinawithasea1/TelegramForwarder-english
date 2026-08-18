@@ -45,7 +45,7 @@ class ForwardRule(Base):
     add_mode = Column(Enum(AddMode), nullable=False, default=AddMode.BLACKLIST) # Add mode, default blacklist
     enable_rule = Column(Boolean, default=True)  # Whether the rule is enabled
     is_filter_user_info = Column(Boolean, default=False)  # Whether to filter user info
-    handle_mode = Column(Enum(HandleMode), nullable=False, default=HandleMode.FORWARD) # Handle mode: edit or forward, default forward
+    handle_mode = Column(Enum(HandleMode), nullable=False, default=HandleMode.EDIT) # Handle mode: edit or forward, default edit (prevents forward loops)
     enable_comment_button = Column(Boolean, default=False)  # Whether to add a direct comment section button
     enable_media_type_filter = Column(Boolean, default=False)  # Whether to enable media type filter
     enable_media_size_filter = Column(Boolean, default=False)  # Whether to enable media size filter

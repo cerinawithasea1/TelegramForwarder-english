@@ -522,40 +522,47 @@ async def create_buttons(rule):
             )
         ])
 
-        if rule.use_bot:  # Only show these settings when using bot account
-            buttons.append([
-                Button.inline(
-                    f"🔄 Replace mode: {RULE_SETTINGS['is_replace']['values'][rule.is_replace]}",
-                    f"toggle_replace:{rule.id}"
-                ),
-                Button.inline(
-                    f"📝 Message format: {RULE_SETTINGS['message_mode']['values'][rule.message_mode]}",
-                    f"toggle_message_mode:{rule.id}"
-                )
-            ])
+        # These settings work regardless of which account sends the message —
+        # replace/format/link-preview/original-info/delete/delay are all plain
+        # text or account-agnostic operations, not bot-only API features.
+        buttons.append([
+            Button.inline(
+                f"🔄 Replace mode: {RULE_SETTINGS['is_replace']['values'][rule.is_replace]}",
+                f"toggle_replace:{rule.id}"
+            ),
+            Button.inline(
+                f"📝 Message format: {RULE_SETTINGS['message_mode']['values'][rule.message_mode]}",
+                f"toggle_message_mode:{rule.id}"
+            )
+        ])
 
-            buttons.append([
-                Button.inline(
-                    f"👁 Link preview: {RULE_SETTINGS['is_preview']['values'][rule.is_preview]}",
-                    f"toggle_preview:{rule.id}"
-                ),
-                Button.inline(
-                    f"🔗 Original link: {RULE_SETTINGS['is_original_link']['values'][rule.is_original_link]}",
-                    f"toggle_original_link:{rule.id}"
-                )
-            ])
+        buttons.append([
+            Button.inline(
+                f"👁 Link preview: {RULE_SETTINGS['is_preview']['values'][rule.is_preview]}",
+                f"toggle_preview:{rule.id}"
+            ),
+            Button.inline(
+                f"🔗 Original link: {RULE_SETTINGS['is_original_link']['values'][rule.is_original_link]}",
+                f"toggle_original_link:{rule.id}"
+            )
+        ])
 
-            buttons.append([
-                Button.inline(
-                    f"👤 Original sender: {RULE_SETTINGS['is_original_sender']['values'][rule.is_original_sender]}",
-                    f"toggle_original_sender:{rule.id}"
-                ),
-                Button.inline(
-                    f"⏰ Send time: {RULE_SETTINGS['is_original_time']['values'][rule.is_original_time]}",
-                    f"toggle_original_time:{rule.id}"
-                )
-            ])
+        buttons.append([
+            Button.inline(
+                f"👤 Original sender: {RULE_SETTINGS['is_original_sender']['values'][rule.is_original_sender]}",
+                f"toggle_original_sender:{rule.id}"
+            ),
+            Button.inline(
+                f"⏰ Send time: {RULE_SETTINGS['is_original_time']['values'][rule.is_original_time]}",
+                f"toggle_original_time:{rule.id}"
+            )
+        ])
 
+        if rule.use_bot:
+            # Comment button attaches an inline URL button to the sent message.
+            # Telegram only allows bot accounts to attach reply_markup/inline
+            # buttons to messages — a regular user account cannot send these,
+            # so this option only makes sense (and only works) in bot mode.
             buttons.append([
                 Button.inline(
                     f"🗑 Delete original: {RULE_SETTINGS['is_delete_original']['values'][rule.is_delete_original]}",
@@ -566,69 +573,76 @@ async def create_buttons(rule):
                     f"toggle_enable_comment_button:{rule.id}"
                 )
             ])
-
+        else:
             buttons.append([
                 Button.inline(
-                    f"⏱️ Delayed processing: {RULE_SETTINGS['enable_delay']['values'][rule.enable_delay]}",
-                    f"toggle_enable_delay:{rule.id}"
-                ),
-                Button.inline(
-                    f"⌛ Delay seconds: {rule.delay_seconds or 5}s",
-                    f"set_delay_time:{rule.id}"
+                    f"🗑 Delete original: {RULE_SETTINGS['is_delete_original']['values'][rule.is_delete_original]}",
+                    f"toggle_delete_original:{rule.id}"
                 )
             ])
 
+        buttons.append([
+            Button.inline(
+                f"⏱️ Delayed processing: {RULE_SETTINGS['enable_delay']['values'][rule.enable_delay]}",
+                f"toggle_enable_delay:{rule.id}"
+            ),
+            Button.inline(
+                f"⌛ Delay seconds: {rule.delay_seconds or 5}s",
+                f"set_delay_time:{rule.id}"
+            )
+        ])
+
+        buttons.append([
+            Button.inline(
+                f"🔄 Sync rule: {RULE_SETTINGS['enable_sync']['values'][rule.enable_sync]}",
+                f"toggle_enable_sync:{rule.id}"
+            ),
+            Button.inline(
+                f"📡 Sync settings",
+                f"set_sync_rule:{rule.id}"
+            )
+        ])
+
+        if UFB_ENABLED == 'true':
             buttons.append([
                 Button.inline(
-                    f"🔄 Sync rule: {RULE_SETTINGS['enable_sync']['values'][rule.enable_sync]}",
-                    f"toggle_enable_sync:{rule.id}"
-                ),
-                Button.inline(
-                    f"📡 Sync settings",
-                    f"set_sync_rule:{rule.id}"
+                    f"☁️ UFB sync: {RULE_SETTINGS['is_ufb']['values'][rule.is_ufb]}",
+                    f"toggle_ufb:{rule.id}"
                 )
             ])
 
-            if UFB_ENABLED == 'true':
-                buttons.append([
-                    Button.inline(
-                        f"☁️ UFB sync: {RULE_SETTINGS['is_ufb']['values'][rule.is_ufb]}",
-                        f"toggle_ufb:{rule.id}"
-                    )
-                ])
+        buttons.append([
+            Button.inline(
+                "🤖 AI settings",
+                f"ai_settings:{rule.id}"
+            ),
+            Button.inline(
+                "🎬 Media settings",
+                f"media_settings:{rule.id}"
+            ),
+            Button.inline(
+                "➕ Other settings",
+                f"other_settings:{rule.id}"
+            )
+        ])
 
-            buttons.append([
-                Button.inline(
-                    "🤖 AI settings",
-                    f"ai_settings:{rule.id}"
-                ),
-                Button.inline(
-                    "🎬 Media settings",
-                    f"media_settings:{rule.id}"
-                ),
-                Button.inline(
-                    "➕ Other settings",
-                    f"other_settings:{rule.id}"
-                )
-            ])
+        buttons.append([
+            Button.inline(
+                "🔔 Push settings",
+                f"push_settings:{rule.id}"
+            )
+        ])
 
-            buttons.append([
-                Button.inline(
-                    "🔔 Push settings",
-                    f"push_settings:{rule.id}"
-                )
-            ])
-
-            buttons.append([
-                Button.inline(
-                    "👈 Back",
-                    "settings"
-                ),
-                Button.inline(
-                    "❌ Close",
-                    "close_settings"
-                )
-            ])
+        buttons.append([
+            Button.inline(
+                "👈 Back",
+                "settings"
+            ),
+            Button.inline(
+                "❌ Close",
+                "close_settings"
+            )
+        ])
 
     finally:
         session.close()

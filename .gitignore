@@ -33,3 +33,6 @@ use_case_examples.md
 
 /logs
 logs/telegram_forwarder.log
+
+# Local pre-deploy backups
+.fix-backup-*/

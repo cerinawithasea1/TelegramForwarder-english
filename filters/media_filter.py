@@ -247,10 +247,23 @@ class MediaFilter(BaseFilter):
                 except Exception as e:
                     logger.error(f'Error downloading media file: {str(e)}')
                     context.errors.append(f"Error downloading media file: {str(e)}")
-        elif is_pure_link_preview:
-            # Record that this is a pure link preview message
-            context.is_pure_link_preview = True
-            logger.info('This is a pure link preview message')
+        else:
+            if is_pure_link_preview:
+                # Record that this is a pure link preview message
+                context.is_pure_link_preview = True
+                logger.info('This is a pure link preview message')
+
+            # No recognized media on this message (plain text, or a bare
+            # link preview with no photo/document/video/audio/voice).
+            # If the rule restricts forwarding to specific media types,
+            # a message with none of those types should not go through either.
+            if rule.enable_media_type_filter:
+                logger.info('Message has no media and media type filter is enabled, blocking')
+                if rule.media_allow_text:
+                    logger.info('No media, but text is allowed through')
+                    context.media_blocked = True
+                else:
+                    context.should_forward = False
 
     async def _is_media_type_blocked(self, media, media_types):
         """

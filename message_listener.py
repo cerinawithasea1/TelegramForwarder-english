@@ -151,11 +151,13 @@ async def handle_user_message(event, user_client, bot_client):
                 logger.info(f'Rule {rule.id} is not enabled')
                 continue
             logger.info(f'Processing forwarding rule ID: {rule.id} (from {source_chat.name} to: {target_chat.name})')
-            if rule.use_bot:
-                # Use process_forward_rule from the filters module directly
-                await process_forward_rule(bot_client, event, str(chat_id), rule)
-            else:
-                await user_handler.process_forward_rule(user_client, event, str(chat_id), rule)
+            # Always run the full filter chain (keyword/media-type/replace/AI/etc.),
+            # just choose which account sends the result. use_bot picks the bot
+            # account; otherwise the user account sends it (still a fresh
+            # send_message/send_file, not a native forward, so no "Forwarded from"
+            # tag is added either way).
+            send_client = bot_client if rule.use_bot else user_client
+            await process_forward_rule(send_client, event, str(chat_id), rule)
 
     except Exception as e:
         logger.error(f'Error processing user message: {str(e)}')
