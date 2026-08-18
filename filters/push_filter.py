@@ -65,7 +65,7 @@ class PushFilter(BaseFilter):
             if context.is_media_group or (context.media_group_messages and context.skipped_media):
                 processed_files = await self._push_media_group(context, push_configs)
             # Push single media message
-            elif context.media_files or context.skipped_media:
+            elif context.media_messages or context.skipped_media:
                 processed_files = await self._push_single_media(context, push_configs)
             # Push plain text message
             else:
@@ -255,7 +255,7 @@ class PushFilter(BaseFilter):
         processed_files = []
 
         # Check if all media exceeded size limit
-        if context.skipped_media and not context.media_files:
+        if context.skipped_media and not context.media_messages:
             # Build notice text
             file_size = context.skipped_media[0][1]
             file_name = context.skipped_media[0][2]
@@ -289,8 +289,8 @@ class PushFilter(BaseFilter):
             if context.media_files:
                 logger.info(f'Using {len(context.media_files)} file(s) already downloaded by SenderFilter')
                 files = context.media_files
-            # Otherwise, download the file ourselves
-            elif rule.enable_only_push and event.message and event.message.media:
+            # Otherwise, download the file ourselves (push needs the bytes)
+            elif event.message and event.message.media:
                 logger.info(f'Downloading single media message ourselves...')
                 need_cleanup = True
                 file_path = await event.message.download_media(os.path.join(os.getcwd(), 'temp'))

@@ -235,18 +235,13 @@ class MediaFilter(BaseFilter):
                 context.skipped_media.append((event.message, file_size, file_name))
                 return True  # Skip subsequent media download regardless
             else:
-                # If forwarding to RSS only, skip downloading — let RSS handle it
+                # If forwarding to RSS only, skip storing media — let RSS handle it
                 if rule.only_rss:
                     return True
-                try:
-                    # Download media file
-                    file_path = await event.message.download_media(TEMP_DIR)
-                    if file_path:
-                        context.media_files.append(file_path)
-                        logger.info(f'Media file downloaded to: {file_path}')
-                except Exception as e:
-                    logger.error(f'Error downloading media file: {str(e)}')
-                    context.errors.append(f"Error downloading media file: {str(e)}")
+                # Store the source message so the sender can forward the media by
+                # reference (a server-side copy) instead of downloading and re-uploading.
+                context.media_messages.append(event.message)
+                logger.info(f'Media queued for by-reference forward: message ID={event.message.id}')
         else:
             if is_pure_link_preview:
                 # Record that this is a pure link preview message

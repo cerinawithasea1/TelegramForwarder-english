@@ -1,5 +1,4 @@
 import logging
-import os
 from filters.base_filter import BaseFilter
 from enums.enums import PreviewMode
 from telethon.errors import FloodWaitError
@@ -75,7 +74,7 @@ class SenderFilter(BaseFilter):
                 logger.info(f'Preparing to send media group message')
                 await self._send_media_group(context, target_chat_id, parse_mode)
             # Handle single media messages
-            elif context.media_files or context.skipped_media:
+            elif context.media_messages or context.skipped_media:
                 logger.info(f'Preparing to send single media message')
                 await self._send_single_media(context, target_chat_id, parse_mode)
             # Handle plain text messages
@@ -128,70 +127,45 @@ class SenderFilter(BaseFilter):
         #     logger.info(f'All files in media group exceeded size limit, sent text and notification')
         #     return
 
-        # Send available media as a group
-        files = []
-        try:
-            for message in context.media_group_messages:
-                if message.media:
-                    file_path = await message.download_media(os.path.join(os.getcwd(), 'temp'))
-                    if file_path:
-                        files.append(file_path)
+        # Send available media as a group, by reference (no download/re-upload)
+        media = []
+        for message in context.media_group_messages:
+            if message.media:
+                media.append(message.media)
 
-            # Save downloaded file paths to context.media_files
-            if files:
-                # Initialize media_files if it doesn't exist
-                if not hasattr(context, 'media_files') or context.media_files is None:
-                    context.media_files = []
-                # Append currently downloaded files to the list
-                context.media_files.extend(files)
-                logger.info(f'Saved {len(files)} downloaded media file path(s) to context.media_files')
+        if media:
+            # Add sender info and message text
+            caption_text = context.sender_info + context.message_text
 
-                # Add sender info and message text
-                caption_text = context.sender_info + context.message_text
+            # If there are oversized files, add notification text
+            for message, size, name in context.skipped_media:
+                caption_text += f"\n\n⚠️ Media file {name if name else 'unnamed file'} ({size}MB) exceeds size limit"
 
-                # If there are oversized files, add notification text
-                for message, size, name in context.skipped_media:
-                    caption_text += f"\n\n⚠️ Media file {name if name else 'unnamed file'} ({size}MB) exceeds size limit"
+            if context.skipped_media:
+                context.original_link = f"\nOriginal message: https://t.me/c/{str(event.chat_id)[4:]}/{event.message.id}"
+            # Add time info and original link
+            caption_text += context.time_info + context.original_link
 
-                if context.skipped_media:
-                    context.original_link = f"\nOriginal message: https://t.me/c/{str(event.chat_id)[4:]}/{event.message.id}"
-                # Add time info and original link
-                caption_text += context.time_info + context.original_link
-
-                # Send all files as a group
-                sent_messages = await client.send_file(
-                    target_chat_id,
-                    files,
-                    caption=caption_text,
-                    parse_mode=parse_mode,
-                    buttons=context.buttons,
-                    link_preview={
-                        PreviewMode.ON: True,
-                        PreviewMode.OFF: False,
-                        PreviewMode.FOLLOW: context.event.message.media is not None
-                    }[rule.is_preview]
-                )
-                # Save sent messages to context
-                if isinstance(sent_messages, list):
-                    context.forwarded_messages = sent_messages
-                else:
-                    context.forwarded_messages = [sent_messages]
-
-                logger.info(f'Media group message sent, saved {len(context.forwarded_messages)} forwarded message(s)')
-        except Exception as e:
-            logger.error(f'Error sending media group message: {str(e)}')
-            raise
-        finally:
-            # Delete temp files, but keep them if push is enabled
-            if not rule.enable_push:
-                for file_path in files:
-                    try:
-                        os.remove(file_path)
-                        logger.info(f'Deleted temp file: {file_path}')
-                    except Exception as e:
-                        logger.error(f'Failed to delete temp file: {str(e)}')
+            # Send all media as a group
+            sent_messages = await client.send_file(
+                target_chat_id,
+                media,
+                caption=caption_text,
+                parse_mode=parse_mode,
+                buttons=context.buttons,
+                link_preview={
+                    PreviewMode.ON: True,
+                    PreviewMode.OFF: False,
+                    PreviewMode.FOLLOW: context.event.message.media is not None
+                }[rule.is_preview]
+            )
+            # Save sent messages to context
+            if isinstance(sent_messages, list):
+                context.forwarded_messages = sent_messages
             else:
-                logger.info(f'Push is enabled, keeping temp files')
+                context.forwarded_messages = [sent_messages]
+
+            logger.info(f'Media group message sent, saved {len(context.forwarded_messages)} forwarded message(s)')
 
     async def _send_single_media(self, context, target_chat_id, parse_mode):
         """Send a single media message"""
@@ -202,7 +176,7 @@ class SenderFilter(BaseFilter):
         logger.info(f'Sending single media message')
 
         # Check whether all media exceeded size limit
-        if context.skipped_media and not context.media_files:
+        if context.skipped_media and not context.media_messages:
             # Build notification text
             file_size = context.skipped_media[0][1]
             file_name = context.skipped_media[0][2]
@@ -224,12 +198,8 @@ class SenderFilter(BaseFilter):
             logger.info(f'Media file exceeded size limit, forwarding text only')
             return
 
-        # Ensure context.media_files exists
-        if not hasattr(context, 'media_files') or context.media_files is None:
-            context.media_files = []
-
-        # Send media files
-        for file_path in context.media_files:
+        # Send media by reference (no download/re-upload)
+        for message in context.media_messages:
             try:
                 caption = (
                     context.sender_info +
@@ -240,7 +210,7 @@ class SenderFilter(BaseFilter):
 
                 await client.send_file(
                     target_chat_id,
-                    file_path,
+                    message.media,
                     caption=caption,
                     parse_mode=parse_mode,
                     buttons=context.buttons,
@@ -250,20 +220,10 @@ class SenderFilter(BaseFilter):
                         PreviewMode.FOLLOW: context.event.message.media is not None
                     }[rule.is_preview]
                 )
-                logger.info(f'Media message sent')
+                logger.info(f'Media message sent (by reference)')
             except Exception as e:
                 logger.error(f'Error sending media message: {str(e)}')
                 raise
-            finally:
-                # Delete temp file, but keep it if push is enabled
-                if not rule.enable_push:
-                    try:
-                        os.remove(file_path)
-                        logger.info(f'Deleted temp file: {file_path}')
-                    except Exception as e:
-                        logger.error(f'Failed to delete temp file: {str(e)}')
-                else:
-                    logger.info(f'Push is enabled, keeping temp file: {file_path}')
 
     async def _send_text_message(self, context, target_chat_id, parse_mode):
         """Send a plain text message"""

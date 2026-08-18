@@ -32,6 +32,9 @@ class MessageContext:
         # Media files collected during processing
         self.media_files = []
 
+        # Source messages carrying media, forwarded by reference (no download)
+        self.media_messages = []
+
         # Sender information
         self.sender_info = ''
 
